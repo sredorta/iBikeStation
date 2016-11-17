@@ -26,7 +26,7 @@ public class Locker {
 
     //Stores the GPS location of the locker
     private Location mLockerLocation = null;
-
+    private boolean mLockerGpsLocated = false;
     //Stores Internet connectivity of the Locker
     private boolean  mLockerConnected = false;
 
@@ -52,6 +52,13 @@ public class Locker {
 
     public boolean isInternetConnected() { return mLockerConnected;}
     public void setInternetConnected(boolean isConnected) { mLockerConnected = isConnected;}
+
+    public void setIsGpsLocated(boolean isGpsLocated) {
+        mLockerGpsLocated = isGpsLocated;
+    }
+    public boolean isGpsLocated() {
+        return mLockerGpsLocated;
+    }
 
 }
 

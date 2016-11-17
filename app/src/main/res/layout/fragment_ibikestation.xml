@@ -3,14 +3,49 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
+    android:background="@drawable/grass_texture"
     tools:context=".iBikeStationFragment">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!" />
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="@string/checker"
+        android:textColor="@color/colorSepia"
+        android:id="@+id/textChecker"
+        android:textStyle="bold|italic"
+        android:layout_above="@+id/imageGps"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="31dp" />
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:id="@+id/imageGps"
+        android:scaleType="fitXY"
+        android:background="@drawable/shape_round_sepia"
+        android:src="@drawable/gps_sepia"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:alpha="0.8"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:id="@+id/imageNetwork"
+        android:scaleType="fitXY"
+        android:background="@drawable/shape_round_sepia"
+        android:src="@drawable/gps_sepia"
+        android:layout_centerVertical="true"
+        android:layout_toRightOf="@+id/imageGps"
+        android:layout_marginLeft="10dp"
+        android:alpha="0.9" />
+
+
 </RelativeLayout>

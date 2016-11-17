@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">iBikeStation</string>
+    <string name="checker">Checking all parameters...</string>
 </resources>
