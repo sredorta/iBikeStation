@@ -1,5 +1,6 @@
 package com.bignerdranch.android.ibikestation;
 
+import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
 
@@ -14,35 +15,36 @@ import java.util.regex.Pattern;
 public class ImageAsset {
     private String mAssetPath;
     private String mName;
-    private Drawable mRedDrawable;
-    private Drawable mGreenDrawable;
-    private Drawable mSepiaDrawable;
-    private Drawable mDrawableBackGround;
+    private Bitmap mOriginalBitmap;
+    private Bitmap mRedBitmap;
+    private Bitmap mGreenBitmap;
+    private Bitmap mSepiaBitmap;
 
-    public Drawable getImageBackGroundResource() {
-        return mDrawableBackGround;
+    public void setOriginalBitmap(Bitmap bmp ) {
+        mOriginalBitmap = bmp;
     }
-    public void setImageBackGroundResource(Drawable d) {
-        mDrawableBackGround = d;
-    }
-    public void setImageRedDrawable(Drawable d ) {
-           mRedDrawable = d;
-    }
-    public Drawable getImageRedDrawable() {
-        return mRedDrawable;
-    }
-    public void setImageGreenDrawable(Drawable d ) {
-        mGreenDrawable = d;
-    }
-    public Drawable getImageGreenDrawable() {
-        return mGreenDrawable;
+    public Bitmap getOriginalBitmap() {
+        return mOriginalBitmap;
     }
 
-    public void setImageSepiaDrawable(Drawable d ) {
-        mSepiaDrawable = d;
+    public void setImageRedBitmap(Bitmap bmp ) {
+           mRedBitmap = bmp;
     }
-    public Drawable getImageSepiaDrawable() {
-        return mSepiaDrawable;
+    public Bitmap getImageRedBitmap() {
+        return mRedBitmap;
+    }
+    public void setImageGreenBitmap(Bitmap bmp ) {
+        mGreenBitmap = bmp;
+    }
+    public Bitmap getImageGreenBitmap() {
+        return mGreenBitmap;
+    }
+
+    public void setImageSepiaBitmap(Bitmap bmp ) {
+        mSepiaBitmap = bmp;
+    }
+    public Bitmap getImageSepiaBitmap() {
+        return mSepiaBitmap;
     }
 
     public ImageAsset(String assetPath) {
@@ -59,5 +61,16 @@ public class ImageAsset {
     }
     public String getName() {
         return mName;
+    }
+    public String getRootName() {
+        String mRootName = mName;
+        Pattern mPattern;
+        Matcher mMatcher;
+
+        mPattern = Pattern.compile("\\.[a-z]*$");
+        mMatcher = mPattern.matcher(mName);
+        mRootName=mMatcher.replaceAll("");
+
+        return mRootName;
     }
 }

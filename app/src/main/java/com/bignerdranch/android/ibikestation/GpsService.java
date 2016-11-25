@@ -3,11 +3,16 @@ package com.bignerdranch.android.ibikestation;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -18,23 +23,7 @@ import android.widget.Toast;
  */
 
 public class GpsService extends Service implements LocationListener {
-
-    //    private final Context mContext;
-    // flag for GPS status
-    public boolean isGPSEnabled = false;
-    Location location = new Location("Point NEW"); // location
-    Location previousLocation = new Location("point OLD");;
-    private double distance = 0;
-    private double latitude = 0.0; // latitude
-    private double longitude; // longitude
-    private float  accuracy = 0;
-    private double altitude = 0.0;
-    private long time = 0;
-    private long timeDelta = 0;
-
-    //Declare intent for UI communication
-    Intent intent;
-    static final public String BROADCAST_ACTION = "com.bignerdranch.android.ibikestation";
+    static final public String BROADCAST_ACTION = "com.bignerdranch.android.ibikestation.GpsService";
 
     // The minimum distance to change Updates in meters
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 0; // 5 meters
@@ -45,6 +34,14 @@ public class GpsService extends Service implements LocationListener {
     private static final long MIN_TIME_BW_UPDATES = 0; // 10 second
     //Minimum time between intervals to considere stable data
     private static final long MIN_TIME_STABLE_DATA = 1000*10*10;
+    // Minimum accuracy required for considering good data
+    private static final long  MIN_ACCURACY_STABLE_DATA = 100;
+
+    //    private final Context mContext;
+    Location location = new Location("Point NEW"); // location
+    Location previousLocation = new Location("point OLD");;
+
+    Intent intent;
 
     // Declaring a Location Manager
     protected LocationManager locationManager;
@@ -54,24 +51,57 @@ public class GpsService extends Service implements LocationListener {
         return new Intent(context, GpsService.class);
     }
 
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        Log.i("SERGI", "GPSTrackerService: Created service");
-        Log.i("SERGI", "GPSTrackerService: onCreate");
-        intent = new Intent(BROADCAST_ACTION);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                MIN_TIME_BW_UPDATES,
-                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+    private static String getBestProvider(LocationManager locationManager) {
+        boolean isGPSEnabled = false;
+        boolean isNetworkEnabled = false;
+        boolean isPassiveEnabled = false;
         try {
             // getting GPS status
             isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            isPassiveEnabled = locationManager.isProviderEnabled(LocationManager.PASSIVE_PROVIDER);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.i("GPS", "GPS not enabled, using network for now");
         }
+        if (isGPSEnabled) {
+             return LocationManager.GPS_PROVIDER;
+        }
+        if (isNetworkEnabled) {
+            return LocationManager.NETWORK_PROVIDER;
+        }
+        if (isPassiveEnabled) {
+            return LocationManager.PASSIVE_PROVIDER;
+        }
+        return null;
+    }
+
+    @Override
+    public void onCreate() {
+        // flag for GPS status
+
+        super.onCreate();
+        //Chec for permissions on latest versions
+        if ( Build.VERSION.SDK_INT >= 23 &&
+                ContextCompat.checkSelfPermission( getBaseContext(), android.Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission( getBaseContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return  ;
+        }
+        intent = new Intent(BROADCAST_ACTION);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        //Use GPS if available, otherwise use Network or passive
+        Log.i("GPS", "Best provider found is :" + getBestProvider(locationManager));
+
+        //If there is no way to get coordinates then broadcast data
+        if (getBestProvider(locationManager) == null) {
+            intent.putExtra("isLocationValid", "false");
+            sendBroadcast(intent);
+            return;
+        }
+        locationManager.requestLocationUpdates(
+                getBestProvider(locationManager),
+                MIN_TIME_BW_UPDATES,
+                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+
         //Initialize previousLocation
         previousLocation.setTime(0);
         previousLocation.setLongitude(0);
@@ -84,7 +114,11 @@ public class GpsService extends Service implements LocationListener {
 
     @Override
     public void onDestroy() {
-        Log.i("SERGI", "GPSTrackerService:Destroyed service");
+        if ( Build.VERSION.SDK_INT >= 23 &&
+                ContextCompat.checkSelfPermission( getBaseContext(), android.Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission( getBaseContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         super.onDestroy();
         locationManager.removeUpdates(GpsService.this);
         if(intent != null) {
@@ -108,49 +142,63 @@ public class GpsService extends Service implements LocationListener {
         previousLocation.setAltitude(location.getAltitude());
         previousLocation.setAccuracy(location.getAccuracy());
         previousLocation.setSpeed(location.getSpeed());
+
     }
 
     // Uses location and previousLocation to compute all data
     private void computeData(Location location, Location previousLocation) {
-        latitude = location.getLatitude();
-        longitude = location.getLongitude();
-        accuracy = location.getAccuracy();
-        altitude = location.getAltitude();
+        double distance = 0;
+        long timeDelta = 0;
+        boolean isWithinDistance = false;
+        boolean isWithinTime = false;
+        boolean isWithinAccuracy = false;
+
+        //Check if distance honors the threshold
         if (previousLocation.getLatitude() != 0 && previousLocation.getLongitude() != 0 ) {
             distance = location.distanceTo(previousLocation);
         }
         Log.i("SERGI","distance = " + distance);
-        //If distance is small and time is small data is stable so we can broadcast data
         if (distance <= MIN_DISTANCE_STABLE_DATA) {
-            time = location.getTime();
-            timeDelta = location.getTime() - previousLocation.getTime();
-            Log.i("SERGI","timeDelata = " + timeDelta);
-            if (timeDelta <= MIN_TIME_STABLE_DATA) {
-                //Broadcast all data
-                broadcastData(intent);
-            }
+            isWithinDistance = true;
         }
-    }
+        //Check if time honors the threshold
+        timeDelta = location.getTime() - previousLocation.getTime();
+        Log.i("SERGI","timeDelata = " + timeDelta);
+        if (timeDelta <= MIN_TIME_STABLE_DATA) {
+            isWithinTime = true;
+        }
+        //Check if accuracy honors the threshold
+        if (location.getAccuracy()<= MIN_ACCURACY_STABLE_DATA) {
+            isWithinAccuracy = true;
+        }
+        Log.i("GPS", "Using provider : " + location.getProvider());
+        //Broadcast data if everything is respected
+        if (isWithinAccuracy && isWithinDistance && isWithinTime) {
+            intent.putExtra("isLocationValid", "true");
+            intent.putExtra("longitude", " " + location.getLongitude());
+            intent.putExtra("latitude", "" + location.getLatitude());
+            intent.putExtra("provider", "" + location.getProvider());
+            intent.putExtra("time", "" + location.getTime());
+            intent.putExtra("accuracy"," " + location.getAccuracy() );
+            intent.putExtra("time_delta"," " + timeDelta );
+            intent.putExtra("distance", String.format("%.1f", distance ));
+            sendBroadcast(intent);
+        }
 
-    //BroadcastResults to activity
-    private void broadcastData(Intent intent) {
-        Log.i("SERGI","broadCastData !");
-        //Broadcast data to the gui
-        intent.putExtra("longitude", " " + longitude);
-        intent.putExtra("latitude", "" + latitude);
-        intent.putExtra("isGPSEnabled", "enabled");
-        intent.putExtra("accuracy"," " + accuracy );
-        intent.putExtra("time_delta"," " + timeDelta );
-        intent.putExtra("distance", String.format("%.1f", distance ));
-        sendBroadcast(intent);
     }
 
     @Override
     public void onLocationChanged(Location location) {
+
+        if ( Build.VERSION.SDK_INT >= 23 &&
+                ContextCompat.checkSelfPermission( getBaseContext(), android.Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission( getBaseContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         Log.i("SERGI","onLocationChanged !");
         //Get new location
         location = locationManager
-                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                .getLastKnownLocation(getBestProvider(locationManager));
         //Do any calculation requiring old/new location
         computeData(location,previousLocation);
         //Update old location with current location for new round
@@ -159,20 +207,12 @@ public class GpsService extends Service implements LocationListener {
 
     @Override
     public void onProviderDisabled(String provider) {
-        Toast.makeText( getApplicationContext(), "Gps Disabled", Toast.LENGTH_SHORT ).show();
         Log.i("SERGI","onProviderDisabled: called function !");
-        isGPSEnabled = false;
-        intent.putExtra("isGPSEnabled", "disabled");
-        sendBroadcast(intent);
     }
 
     @Override
     public void onProviderEnabled(String provider) {
-        Toast.makeText( getApplicationContext(), "Gps Enabled", Toast.LENGTH_SHORT ).show();
         Log.i("GPS_TEST","onProviderEnabled: called function !");
-        isGPSEnabled = true;
-        intent.putExtra("isGPSEnabled", "enabled");
-        sendBroadcast(intent);
     }
 
     @Override

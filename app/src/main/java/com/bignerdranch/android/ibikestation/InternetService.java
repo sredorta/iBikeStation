@@ -1,9 +1,11 @@
 package com.bignerdranch.android.ibikestation;
 
 import android.app.IntentService;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.os.IBinder;
 import android.util.Log;
 
 import java.io.IOException;
@@ -22,32 +24,36 @@ import java.util.concurrent.FutureTask;
  */
 
 
-public class InternetService extends IntentService {
+public class InternetService extends Service {
+    static final public String BROADCAST_ACTION = "com.bignerdranch.android.ibikestation.InternetService";
     private static final String TAG = "SERGI:Poll:";
+
+    Intent intent;
+
 
     public static Intent newIntent(Context context) {
          return new Intent(context, InternetService.class);
     }
 
-    public InternetService() {
-        super(TAG);
-    }
-
     @Override
-    protected void onHandleIntent(Intent intent) {
+    public void onCreate() {
+        super.onCreate();
         boolean isConnected;
         boolean isExisting;
+        intent = new Intent(BROADCAST_ACTION);
+
+
         //Get status of network and send result to Fragment
         isExisting = isNetworkExisting(getApplicationContext());
         isConnected = isNetworkWorking(getApplicationContext());
-        intent.putExtra("isConnected", isConnected && isExisting);
+        Log.i("NWK", "Sending isConnected as extra " + isConnected);
+        intent.putExtra("isConnected", String.valueOf(isConnected && isExisting) );
         sendBroadcast(intent);
-
         if(!isConnected) {
-            Log.i(TAG,"Network is not connected !");
+            Log.i("NWK","Network is not connected !");
             return;
         }
-        Log.i(TAG,"Network is connected !");
+        Log.i("NWK","Network is connected !");
     }
 
     //Returns if Network is connected and available
@@ -89,11 +95,12 @@ public class InternetService extends IntentService {
         public Boolean call() {
             if (isNetworkExisting(context)) {
                 try {
+                    Log.i(TAG, "Trying to see if we can connect to google");
                     HttpURLConnection urlc = (HttpURLConnection)
                             (new URL("http://clients3.google.com/generate_204").openConnection());
                     urlc.setRequestProperty("User-Agent", "Android");
                     urlc.setRequestProperty("Connection", "close");
-                    urlc.setConnectTimeout(1500);
+                    urlc.setConnectTimeout(4000);
                     urlc.connect();
                     return (urlc.getResponseCode() == 204 && urlc.getContentLength() == 0);
                 } catch (IOException e) {
@@ -106,4 +113,8 @@ public class InternetService extends IntentService {
         }
     }
 
+    @Override
+    public IBinder onBind(Intent arg0) {
+        return null;
+    }
 }

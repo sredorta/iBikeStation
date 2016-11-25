@@ -30,6 +30,9 @@ public class Locker {
     //Stores Internet connectivity of the Locker
     private boolean  mLockerConnected = false;
 
+    //Defines if PHP server is running
+    private boolean mLockerCloudAlive = false;
+
     //Creates all Locks
     public List<Lock> getLocks() {
         List<Lock> locks = new ArrayList<>();
@@ -59,6 +62,9 @@ public class Locker {
     public boolean isGpsLocated() {
         return mLockerGpsLocated;
     }
+
+    public boolean isCloudAlive() { return mLockerCloudAlive;}
+    public void setCloudAlive(boolean isAlive) { mLockerCloudAlive = isAlive;}
 
 }
 

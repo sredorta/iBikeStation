@@ -6,11 +6,14 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.provider.CalendarContract;
 import android.util.Log;
 
 import java.io.IOException;
@@ -25,7 +28,7 @@ import java.util.regex.Pattern;
  */
 public class AssetHandler {
     private static final String TAG ="SERGI:Asset:";
-    private static final String IMAGE_FOLDER = "checkerImages";
+    private static final String IMAGE_ICONS_FOLDER = "checkerImages";
     private List<ImageAsset> mImages = new ArrayList<>();
 
     private AssetManager mAssets;
@@ -35,53 +38,35 @@ public class AssetHandler {
     }
 
     private void loadAssets() {
-        Pattern mPattern;
-        Matcher mMatcher;
-        String   imageNamesString = "";
-        String[] imageNames;
         Log.i("SERGI","Enter here !");
         try {
-            for (String tmp : mAssets.list(IMAGE_FOLDER)) {
-                if (imageNamesString.equals("")) {
-                    imageNamesString = imageNamesString.concat(tmp);
-                } else {
-                    imageNamesString = imageNamesString.concat(" " + tmp);
+            for (String filename : mAssets.list(IMAGE_ICONS_FOLDER)) {
+                Log.i("SERGI","Image called " + filename);
+                String assetPath = IMAGE_ICONS_FOLDER + "/" + filename;
+                ImageAsset image = new ImageAsset(assetPath);
+                try {
+                    load(image);
+                } catch (IOException ex) {
+                    Log.i("SERGI", "Error while loading drawables !");
                 }
+                mImages.add(image);
             }
-            Log.i("SERGI","imageNamesString is = " + imageNamesString);
-            mPattern = Pattern.compile("_.*.png$");
-            mMatcher = mPattern.matcher(imageNamesString);
-            imageNamesString = mMatcher.replaceAll("");
-            Log.i("SERGI","imageNamesString is = " + imageNamesString);
-            imageNames = imageNamesString.split(" ");
-
-            Log.i(TAG, "Found " + imageNames.length + " images");
         } catch (IOException ioe) {
             Log.i(TAG, "Could not find assets !");
-            return;
-        }
-        for (String filename : imageNames) {
-            Log.i("SERGI","Image called " + filename);
-            String assetPath = IMAGE_FOLDER + "/" + filename;
-            ImageAsset image = new ImageAsset(assetPath);
-            try {
-                load(image);
-            } catch (IOException ex) {
-                Log.i("SERGI", "Error while loading drawables !");
-            }
-            mImages.add(image);
         }
     }
     //Returns the Image asset that matches the pattern exactly
     public ImageAsset getImageAsset(String s) {
         Pattern mPattern;
         Matcher mMatcher;
-        ImageAsset myImage = null;
 
+        ImageAsset myImage = null;
+        Log.i("SERGI", "Finding ImageAsset with pattern " + s);
         for (ImageAsset image : mImages) {
             mPattern = Pattern.compile(s);
-            mMatcher = mPattern.matcher(image.getName());
+            mMatcher = mPattern.matcher(image.getRootName());
             if (mMatcher.matches()) {
+                Log.i("SERGI", "Found this one matching: " + image.getRootName());
                 myImage = image;
             }
         }
@@ -91,59 +76,47 @@ public class AssetHandler {
     private void load(ImageAsset image) throws IOException {
         InputStream ims;
 
-        //Bitmap loader
+        //Bitmap loader for the original image
         Bitmap bitmap;
-
-        //Load Red drawable
-
-        Drawable d;
-        ims = mAssets.open(image.getAssetPath() + "_red.png");
-        Log.i("SERGI","Setting red drawable with " + image.getAssetPath() + "_red.png");
+        ims = mAssets.open(image.getAssetPath());
+        Log.i("SERGI","Loading default bitmap " + image.getAssetPath());
         bitmap = BitmapFactory.decodeStream(ims);
-        d = Drawable.createFromStream(ims, null);
-        image.setImageRedDrawable(d);
         ims.close();
 
-        //Load green drawable
-        ims = mAssets.open(image.getAssetPath() + "_green.png");
-        Log.i("SERGI","Setting green drawable with " + image.getAssetPath() + "_green.png");
-        image.setImageGreenDrawable(Drawable.createFromStream(ims, null));
-        ims.close();
-
-        //Load sepia drawable
-        ims = mAssets.open(image.getAssetPath() + "_sepia.png");
-        Log.i("SERGI","Setting sepia drawable with " + image.getAssetPath() + "_sepia.png");
-        image.setImageSepiaDrawable(Drawable.createFromStream(ims, null));
-        ims.close();
+        //Now create the diferent versions of the image
+        image.setOriginalBitmap(bitmap);
+        Log.i("SERGI", "Loaded original bitmap !");
+        image.setImageRedBitmap(colorizeBitmap("red",image.getOriginalBitmap()));
+        image.setImageGreenBitmap(colorizeBitmap("green",image.getOriginalBitmap()));
+        image.setImageSepiaBitmap(colorizeBitmap("sepia",image.getOriginalBitmap()));
     }
 
 
-    private Bitmap createSepia(Bitmap src) {
-        ColorMatrix t;
-
-        ColorMatrix colorMatrix_Sepia = new ColorMatrix();
-        colorMatrix_Sepia.setSaturation(0);
-
+    private Bitmap colorizeBitmap(String color, Bitmap src) {
+        //Apply coloring filter
+        ColorMatrix cm = new ColorMatrix();
+        cm.setSaturation(0);
         ColorMatrix colorScale = new ColorMatrix();
-        colorScale.setScale(1, 1, 0.8f, 1);
+        switch (color) {
+            case "red":    colorScale.setScale(4f,0.8f,0.8f,2f); break;
+            case "green":  colorScale.setScale(0.1f,0.9f,0.1f,2f); break;
+            case "blue":   colorScale.setScale(0.3f,0.3f,1,1); break;
+            case "sepia":  colorScale.setScale(1, 1, 0.8f, 1); break;
+            case "bw":     colorScale.setScale(1,1,1,1); break;
+            default:       colorScale.setScale(1,1,1,1); break;
+        }
 
-        colorMatrix_Sepia.postConcat(colorScale);
-
-        ColorFilter ColorFilter_Sepia = new ColorMatrixColorFilter(
-                colorMatrix_Sepia);
+        cm.postConcat(colorScale);
+        ColorFilter cf = new ColorMatrixColorFilter(cm);
 
         Bitmap bitmap = Bitmap.createBitmap(src.getWidth(), src.getHeight(),
                 Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-
         Paint paint = new Paint();
-
-        paint.setColorFilter(ColorFilter_Sepia);
+        paint.setColorFilter(cf);
         canvas.drawBitmap(src, 0, 0, paint);
 
         return bitmap;
     }
-
-
 
 }

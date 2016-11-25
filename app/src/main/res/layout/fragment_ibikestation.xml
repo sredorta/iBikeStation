@@ -28,11 +28,10 @@
         android:layout_height="80dp"
         android:id="@+id/imageGps"
         android:scaleType="fitXY"
-        android:background="@drawable/shape_round_sepia"
         android:src="@drawable/gps_sepia"
         android:layout_alignParentLeft="true"
         android:layout_centerVertical="true"
-        android:alpha="0.8"
+        android:alpha="80"
         android:visibility="invisible" />
 
     <ImageView
@@ -40,12 +39,22 @@
         android:layout_height="80dp"
         android:id="@+id/imageNetwork"
         android:scaleType="fitXY"
-        android:background="@drawable/shape_round_sepia"
         android:src="@drawable/gps_sepia"
         android:layout_centerVertical="true"
         android:layout_toRightOf="@+id/imageGps"
         android:layout_marginLeft="10dp"
-        android:alpha="0.9" />
-
+        android:alpha="0.9"
+        android:visibility="invisible"/>
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:id="@+id/imageCloud"
+        android:scaleType="fitXY"
+        android:src="@drawable/gps_sepia"
+        android:layout_centerVertical="true"
+        android:layout_toRightOf="@+id/imageNetwork"
+        android:layout_marginLeft="10dp"
+        android:alpha="0.9"
+        android:visibility="invisible"/>
 
 </RelativeLayout>
