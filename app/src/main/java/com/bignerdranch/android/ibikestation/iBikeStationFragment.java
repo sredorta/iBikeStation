@@ -15,9 +15,11 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.provider.SyncStateContract;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -27,6 +29,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.List;
 
@@ -40,18 +43,16 @@ iBikeStationFragment
         x)Waits some time and check status of everything for moving forward
  */
 public class iBikeStationFragment extends Fragment {
+    //Name of the Locker as registered in the SQL server
+    public static final String LOCKER_NAME = "station1";
 
-    private JsonItem mItem = new JsonItem();
+    public BroadcastReceiver GpsServiceReceiver;
     private FetchCloudTask task;
-
     public Locker mLocker;
-    public boolean isGpsDataAvailable = false;
-    public int checkerCount=0;
-    private View mSceneView;
     private AssetHandler mAssetImage;
-    private static final int CHECK_INTERVAL = 1000*15; // 10 seconds
-    private Handler customHandler = new Handler();
+    private View mSceneView;
 
+    // Constructor
     public static iBikeStationFragment newInstance() {
         return new iBikeStationFragment();
     }
@@ -61,14 +62,14 @@ public class iBikeStationFragment extends Fragment {
         super.onCreate(savedInstanceState);
         //Declare a new Locker
         mLocker = new Locker();
+        mLocker.setLockerName(LOCKER_NAME);
         //Create one Assets object for handling images
         mAssetImage = new AssetHandler(getActivity());
-
-
 
         updateGpsLocation();
         checkInternetConnectivity();
         checkCloudConnectivity();
+        updateCloud();
     }
 
 
@@ -86,10 +87,42 @@ public class iBikeStationFragment extends Fragment {
 
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playSequentially(startAnimation("gps", v, mGpsView),startAnimation("network", v, mNetworkView),startAnimation("cloud", v, mCloudView));
+        animatorSet.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {
+
+            }
+            //When animation is finished we start a new activity
+            @Override
+            public void onAnimationEnd(Animator animator) {
+                startRunningActivity();
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
         animatorSet.start();
 
         return v;
     }
+    //Run now the main activity
+    public void startRunningActivity() {
+        if (mLocker.isInternetConnected() && mLocker.isCloudAlive()) { //Missing here GPS for now
+            Toast.makeText(getActivity(), R.string.checker_result_ok, Toast.LENGTH_LONG).show();
+            Intent i = iBikeRunningActivity.newIntent(getActivity(),mLocker);
+            startActivity(i);
+            //Kill this activity of checking now and switch to the new one
+            getActivity().finish();
+        }
+    }
+
 
     //  startAnimation
     //     Provide a pattern like "gps" the current view and the ImageView
@@ -163,13 +196,21 @@ public class iBikeStationFragment extends Fragment {
         super.onDestroy();
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        //Unregistering the GPS service in case no location was got
+        if (GpsServiceReceiver != null) {
+            getActivity().unregisterReceiver(GpsServiceReceiver);
+        }
+    }
+
     /*  updateGpsLocation
-            Starts a GpsService service that will provide gps coords once stable
-            Once gps Coords are available the service is stopped
-     */
+                Starts a GpsService service that will provide gps coords once stable
+                Once gps Coords are available the service is stopped
+         */
     private void updateGpsLocation() {
         //Get current GPS Location and update it
-        final BroadcastReceiver GpsServiceReceiver;
         final Intent GpsServiceIntent = GpsService.newIntent(getActivity());
         getActivity().startService(GpsServiceIntent);
         // Create a BroadcastReceiver that receives the data from intent of GpsService Service
@@ -224,44 +265,69 @@ public class iBikeStationFragment extends Fragment {
     // Connects to the server
     private void checkCloudConnectivity() {
         //Start an async task to check if we can connect to the server
-        task = new FetchCloudTask("test");
+        task = new FetchCloudTask("isCloudConnected");
+        task.execute();
+    }
+    private void updateCloud() {
+        //Update fields of location in the SQL db
+        task = new FetchCloudTask("setLocation");
         task.execute();
     }
 
 
     //Get data from website
-    private class FetchCloudTask extends AsyncTask<Void,Void,JsonItem> {
+    private class FetchCloudTask extends AsyncTask<Void,Void,Boolean> {
         private String mQuery;
-        public JsonItem mItem;
 
         public FetchCloudTask(String query) {
             mQuery = query;
         }
 
+
         @Override
-        protected JsonItem doInBackground(Void... params) {
-            if (mQuery == null) {
-                mItem = new CloudFetchr().isCloudConnected();
-                Log.i("SERGI:CLOUD:", "AsyncTask doInBackground, success = " + mItem.getSuccess());
-                return mItem;
-            } else {
-                //For the moment do the same
-                mItem = new CloudFetchr().isCloudConnected();
-                Log.i("SERGI:CLOUD:", "AsyncTask doInBackground, success = " + mItem.getSuccess());
-                return mItem;
+        protected Boolean doInBackground(Void... params) {
+            String longitude;
+            String latitude;
+            Log.i("ASYNC:", "doInBackground");
+            switch (mQuery) {
+                case "isCloudConnected":
+                    Log.i("ASYNC:", "We are in isCoudConnected");
+                    return (new CloudFetchr().isCloudConnected());
+                case "setLocation":
+                    Log.i("ASYNC:", "We are in setLocation");
+                    if (mLocker.isGpsLocated()) {
+                        longitude = String.valueOf(mLocker.getLockerLocation().getLongitude());
+                        latitude = String.valueOf(mLocker.getLockerLocation().getLatitude());
+                    } else {
+                        longitude = "not_available";
+                        latitude= "not_available";
+                    }
+                    return (new CloudFetchr().setLocation(longitude,latitude));
+                default:
+                    return (new CloudFetchr().isCloudConnected());
             }
+
         }
 
         @Override
-        protected void onPostExecute(JsonItem item) {
-            Log.i("SERGI:CLOUD:", "AsyncTask postExec, success = " + mItem.getSuccess());
-            mLocker.setCloudAlive(mItem.getSuccess());
+        protected void onPostExecute(Boolean isConnected) {
+            Log.i("SERGI:CLOUD:", "AsyncTask postExec, success = " + isConnected);
+            switch (mQuery) {
+                case "isCloudConnected":
+                    mLocker.setCloudAlive(isConnected);
+                    break;
+                case "setLocation":
+                    Log.i("SERGI:CLOUD:", "AsyncTask postExec for setLocation, success = " + isConnected);
+                    break;
+                default:
+                    //Do nothing
+            }
         }
     }
+
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
     }
 } //End of Class
-

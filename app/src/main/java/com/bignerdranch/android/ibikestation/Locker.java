@@ -21,6 +21,8 @@ import java.util.UUID;
     Each Lock is an object Lock
  */
 public class Locker {
+    private String mName;
+    private String mAction="nothing";
     private static final int LockerCapacity = 10;
     private static int LockerAvail = 10;
 
@@ -43,6 +45,19 @@ public class Locker {
         return locks;
     }
 
+    public void setAction(String action) {
+        mAction = action;
+    }
+    public String getAction() {
+        return mAction;
+    }
+    //Set the name
+    public void setLockerName(String name) {
+        mName = name;
+    }
+    public String getLockerName() {
+        return mName;
+    }
     //Get GPS location of the locker
     public Location getLockerLocation() {
         return mLockerLocation;

@@ -1,22 +1,17 @@
 package com.bignerdranch.android.ibikestation;
 
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
@@ -24,9 +19,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,16 +30,24 @@ import java.util.Map;
 
 public class CloudFetchr {
     private static final String TAG = "SERGI:CloudFetchr";
-    private static final String URI_BASE = "http://ibikestation.000webhostapp.com/db_connect_checker_wi.php";
-    private static final String USER = "sergi";  //"id228014" will fail ,not allwed in http query !;
+    private static final String URI_BASE = "http://ibikestation.000webhostapp.com/";
+    private static final String PHP_CONNECTION_CHECK = "db_connect_checker.php";                // Params required : none
+    private static final String PHP_STATION_UPDATE = "db_station_update.php";                   // Params required : name + latitude...
+    private static final String PHP_STATION_REGISTERED = "db_station_registered.php";           // Params required : name
+    private static final String PHP_STATION_ADD = "db_station_add.php";                         // Params required: name
+    private static final String PHP_STATION_STATUS_REQUEST = "db_station_status_request.php";   // Params required: name
+
+    private static final String USER = "sergi";
     private static final String PASSWORD = "HIB2oB2f" ;
-    private static final Uri ENDPOINT = Uri
-            .parse(URI_BASE)
-            .buildUpon()
-            .build();
+
 
     //Build http string besed on method and query
-    private URL buildUrl(HashMap<String, String> params) {
+    private URL buildUrl(String Action,HashMap<String, String> params) {
+        Uri ENDPOINT = Uri
+                .parse(URI_BASE + Action)
+                .buildUpon()
+                .build();
+
         URL url = null;
         Uri.Builder uriBuilder = ENDPOINT.buildUpon();
         //Add GET query parameters using the HashMap
@@ -74,8 +75,7 @@ public class CloudFetchr {
         OutputStreamWriter request = null;
         String response = null;
 
-        try
-        {
+        try {
             connection = (HttpURLConnection) url.openConnection();
             //Required to enable input stream, otherwhise we get EOF (When using POST DoOutput is required
             connection.setDoInput(true);
@@ -91,70 +91,60 @@ public class CloudFetchr {
             InputStreamReader isr = new InputStreamReader(connection.getInputStream());
             BufferedReader reader = new BufferedReader(isr);
             StringBuilder sb = new StringBuilder();
-            while ((line = reader.readLine()) != null)
-            {
+            while ((line = reader.readLine()) != null) {
                 sb.append(line + "\n");
             }
             // Response from server after login process will be stored in response variable.
             response = sb.toString();
             // You can perform UI operations here
-            Log.i(TAG,"Message from Server: \n"+ response);
+            Log.i(TAG, "Message from Server: \n" + response);
             isr.close();
             reader.close();
 
-        }
-        catch(IOException e)
-        {
+        } catch (IOException e) {
             // Error
-            Log.e(TAG,"POST method try", e);
+            Log.e(TAG, "POST method try", e);
         }
-        Log.i(TAG,response);
+        Log.i(TAG, response);
         return response;
-
-
-/*
-        Log.i(TAG,"Setted connection timeout");
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Log.i(TAG,"Connection before4");
-
-            InputStream in            =  connection.getInputStream();
-//            InputStreamReader reader = new InputStreamReader(connection.getInputStream());
-            Log.i(TAG,"Connection after");
-            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                throw new IOException(connection.getResponseMessage() + ": width " + urlSpec);
-            }
-            Log.i(TAG, "Just before crash");
-            int bytesRead = 0;
-            byte[] buffer = new byte[1024];
-            while ((bytesRead = in.read(buffer))>0) {
-                Log.i(TAG,"read " + bytesRead);
-                out.write(buffer,0,bytesRead);
-            }
-            out.close();
-            return out.toByteArray();
-        } finally {
-            connection.disconnect();
-        }
-        */
     }
 
-    //Get string data from URL
-/*    private String getURLString(String urlSpec) throws IOException {
-        return new String(getURLBytes(urlSpec));
-    }
-*/
-    public JsonItem isCloudConnected() {
-
+    public String getAction() {
         //Define the POST parameters in a HashMap
         HashMap<String, String> parameters = new HashMap<>();
-        parameters.put("user", USER);
-        parameters.put("password",  PASSWORD);
-        //Parameters like id091919 will fail !!! Be carefull EOF will be returned
+        parameters.put("name", iBikeStationFragment.LOCKER_NAME);
 
-        URL url = buildUrl(parameters);
+
+        URL url = buildUrl(PHP_STATION_STATUS_REQUEST,parameters);
+        JsonItem networkAnswer = getJSON(url);
+        return (networkAnswer.getAction());
+    }
+
+    public Boolean setLocation(String longitude,String latitude) {
+        //Define the POST parameters in a HashMap
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("name", iBikeStationFragment.LOCKER_NAME);
+        parameters.put("longitude", longitude);
+        parameters.put("latitude", latitude);
+
+        URL url = buildUrl(PHP_STATION_UPDATE,parameters);
+        JsonItem networkAnswer = getJSON(url);
+        return (networkAnswer.getSuccess());
+    }
+
+    public Boolean isCloudConnected() {
+        //Define the POST parameters in a HashMap
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("name", iBikeStationFragment.LOCKER_NAME);
+
+        URL url = buildUrl(PHP_CONNECTION_CHECK,parameters);
+        JsonItem networkAnswer = getJSON(url);
+        return (networkAnswer.getSuccess());
+    }
+
+    // Sends PHP request and returns JSON object
+    private JsonItem getJSON(URL url){
         JsonItem item = new JsonItem();
-
         try {
             String jsonString = getURLString(url);
             Log.i(TAG, "Received JSON:" + jsonString);
@@ -168,5 +158,5 @@ public class CloudFetchr {
         }
         return item;
     }
-
 }
+

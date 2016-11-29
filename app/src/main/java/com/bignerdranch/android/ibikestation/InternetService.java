@@ -27,7 +27,7 @@ import java.util.concurrent.FutureTask;
 public class InternetService extends Service {
     static final public String BROADCAST_ACTION = "com.bignerdranch.android.ibikestation.InternetService";
     private static final String TAG = "SERGI:Poll:";
-
+    private static final String URI_BASE = "http://clients3.google.com/generate_204";
     Intent intent;
 
 
@@ -41,7 +41,6 @@ public class InternetService extends Service {
         boolean isConnected;
         boolean isExisting;
         intent = new Intent(BROADCAST_ACTION);
-
 
         //Get status of network and send result to Fragment
         isExisting = isNetworkExisting(getApplicationContext());
@@ -97,7 +96,7 @@ public class InternetService extends Service {
                 try {
                     Log.i(TAG, "Trying to see if we can connect to google");
                     HttpURLConnection urlc = (HttpURLConnection)
-                            (new URL("http://clients3.google.com/generate_204").openConnection());
+                            (new URL(URI_BASE).openConnection());
                     urlc.setRequestProperty("User-Agent", "Android");
                     urlc.setRequestProperty("Connection", "close");
                     urlc.setConnectTimeout(4000);

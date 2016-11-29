@@ -17,6 +17,9 @@ public class JsonItem {
         @SerializedName("message")
         private String mMessage = "Could not connect to cloud !";
 
+        @SerializedName("action")
+        private String mAction = "nothing";
+
         public boolean getSuccess() {
             if (mSuccess.equals("1")) {
                 mSuccess = "true";
@@ -30,6 +33,10 @@ public class JsonItem {
         public String getMessage() {
             return mMessage;
         }
+
+        public String getAction() {
+        return mAction;
+    }
 
         public static JsonItem parseJSON(String response) {
             Gson gson = new GsonBuilder().create();
