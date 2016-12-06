@@ -28,14 +28,14 @@ public class GpsService extends Service implements LocationListener {
     // The minimum distance to change Updates in meters
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 0; // 5 meters
     // Minimum distance to considere data stable
-    private static final long MIN_DISTANCE_STABLE_DATA = 100;
+    private static final long MIN_DISTANCE_STABLE_DATA = 1000;
 
     // The minimum time between updates in milliseconds
     private static final long MIN_TIME_BW_UPDATES = 0; // 10 second
     //Minimum time between intervals to considere stable data
     private static final long MIN_TIME_STABLE_DATA = 1000*10*10;
     // Minimum accuracy required for considering good data
-    private static final long  MIN_ACCURACY_STABLE_DATA = 100;
+    private static final long  MIN_ACCURACY_STABLE_DATA = 1000;
 
     //    private final Context mContext;
     Location location = new Location("Point NEW"); // location

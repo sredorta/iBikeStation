@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -21,6 +22,7 @@ import android.os.SystemClock;
 import android.provider.Settings;
 import android.provider.SyncStateContract;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -44,7 +46,7 @@ iBikeStationFragment
  */
 public class iBikeStationFragment extends Fragment {
     //Name of the Locker as registered in the SQL server
-    public static final String LOCKER_NAME = "station1";
+    public static final String LOCKER_NAME = "station2";
 
     public BroadcastReceiver GpsServiceReceiver;
     private FetchCloudTask task;
@@ -66,10 +68,14 @@ public class iBikeStationFragment extends Fragment {
         //Create one Assets object for handling images
         mAssetImage = new AssetHandler(getActivity());
 
-        updateGpsLocation();
-        checkInternetConnectivity();
-        checkCloudConnectivity();
-        updateCloud();
+ //////////////       updateGpsLocation();
+ //////////////       checkInternetConnectivity();
+ /////////////       checkCloudConnectivity();
+ ////////////       updateCloud();
+        Toast.makeText(getActivity(), R.string.checker_result_ok, Toast.LENGTH_LONG).show();
+        Intent i = iBikeRunningActivity.newIntent(getActivity(),mLocker);
+        startActivity(i);
+
     }
 
 
@@ -84,10 +90,10 @@ public class iBikeStationFragment extends Fragment {
         final ImageView mGpsView = (ImageView) v.findViewById(R.id.imageGps);
         final ImageView mNetworkView = (ImageView) v.findViewById(R.id.imageNetwork);
         final ImageView mCloudView = (ImageView) v.findViewById(R.id.imageCloud);
-
+/*
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playSequentially(startAnimation("gps", v, mGpsView),startAnimation("network", v, mNetworkView),startAnimation("cloud", v, mCloudView));
-        animatorSet.addListener(new Animator.AnimatorListener() {
+        animatorSet.addListener(new AnimatorSet.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animator) {
 
@@ -109,17 +115,19 @@ public class iBikeStationFragment extends Fragment {
             }
         });
         animatorSet.start();
-
+*/
         return v;
     }
     //Run now the main activity
     public void startRunningActivity() {
         if (mLocker.isInternetConnected() && mLocker.isCloudAlive()) { //Missing here GPS for now
+            Activity myActivity = getActivity();
+
             Toast.makeText(getActivity(), R.string.checker_result_ok, Toast.LENGTH_LONG).show();
             Intent i = iBikeRunningActivity.newIntent(getActivity(),mLocker);
             startActivity(i);
             //Kill this activity of checking now and switch to the new one
-            getActivity().finish();
+//////////////////////////////////////////////////////////////            myActivity.finish();
         }
     }
 
@@ -193,16 +201,18 @@ public class iBikeStationFragment extends Fragment {
 
     @Override
     public void onDestroy() {
+        //Unregistering the GPS service in case no location was got
+        if (GpsServiceReceiver != null) {
+            getActivity().unregisterReceiver(GpsServiceReceiver);
+            Toast.makeText(getActivity(),"Destroyed GPS service !", Toast.LENGTH_SHORT).show();
+        }
         super.onDestroy();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        //Unregistering the GPS service in case no location was got
-        if (GpsServiceReceiver != null) {
-            getActivity().unregisterReceiver(GpsServiceReceiver);
-        }
+
     }
 
     /*  updateGpsLocation

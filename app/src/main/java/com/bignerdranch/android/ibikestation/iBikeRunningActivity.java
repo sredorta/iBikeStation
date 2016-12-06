@@ -17,6 +17,11 @@ public class iBikeRunningActivity extends SingleFragmentActivity{
         i.putExtra("MyParcelable", myParcelable);
         return i;
     }
+    public static Intent newIntent(Context context, String action) {
+        Intent i = new Intent(context, iBikeRunningActivity.class);
+        i.putExtra("action", action);
+        return i;
+    }
 
     @Override
     protected Fragment createFragment() {

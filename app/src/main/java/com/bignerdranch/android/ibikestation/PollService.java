@@ -1,10 +1,12 @@
 package com.bignerdranch.android.ibikestation;
 
 import android.app.AlarmManager;
+import android.app.IntentService;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
@@ -12,46 +14,92 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by sredorta on 11/29/2016.
  */
 
-public class PollService extends Service {
+public class PollService extends IntentService {
     static final public String BROADCAST_ACTION = "com.bignerdranch.android.ibikestation.PollService";
     private static final String TAG = "SERGI:PollService:";
-    private static Context mContext;
+    public static Context mContext;
     public String mAction = "nothing";
-    Intent intent;
-    private static final int POLL_INTERVAL = 1000*3; // 6 seconds
-    public static final String ACTION_SHOW_NOTIFICATION = "com.bignerdranch.android.photogallery.SHOW_NOTIFICATION";
-    public static final String PERM_PRIVATE= "com.bignerdranch.android.photogallery.PRIVATE";
-    public static final String REQUEST_CODE ="REQUEST_CODE";
-    public static final String NOTIFICATION = "NOTIFICATION";
+//    private FetchCloudTask task;
+    private static final int POLL_INTERVAL = 1000*2; // 6 seconds
 
+    //Constructor
+    public PollService() {super(TAG);}
+
+    //Intent handler
     public static Intent newIntent(Context context) {
+        mContext = context;
         return new Intent(context, PollService.class);
     }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        String myAction;
-        intent = new Intent(BROADCAST_ACTION);
-
-        Log.i(TAG,"Starting background task !");
-        myAction = getAction(getApplicationContext());
-
-        Log.i(TAG, "Sending action " + myAction);
-        intent.putExtra("action", myAction );
-        sendBroadcast(intent);
+    //Define an alarm to check every X seconds if new content is available
+    public static void setServiceAlarm(Context context,Boolean isOn) {
+        Intent i = PollService.newIntent(context);
+        PendingIntent pi = PendingIntent.getService(context,0,i,0);
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (isOn) {
+            alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(), POLL_INTERVAL, pi);
+        } else {
+            alarmManager.cancel(pi);
+            pi.cancel();
+        }
+    }
+    // Check if alarm is active
+    public static boolean isServiceAlarmOn(Context context) {
+        Intent i = PollService.newIntent(context);
+        PendingIntent pi = PendingIntent.getService(context,0,i,PendingIntent.FLAG_NO_CREATE);
+        return pi!= null;
     }
 
+
+    @Override
+    protected void onHandleIntent(Intent intent) {
+        Log.i(TAG,"onHandleIntent I'm here !");
+        mAction = new CloudFetchr().getAction();
+
+//        task = new FetchCloudTask("dummy");
+//        task.execute();
+        Log.i(TAG,"Sending Poll Result Action : " + mAction);
+        Intent myIntent = new Intent(BROADCAST_ACTION);
+        myIntent.putExtra("action", mAction);
+        //PendingIntent pi = PendingIntent.getActivity(this,0,i,0);
+        sendBroadcast(myIntent);
+
+    }
+
+/*
+    //Get data from website
+    private class FetchCloudTask extends AsyncTask<Void,Void,String> {
+        private String mQuery;
+        public FetchCloudTask(String query) {
+            mQuery = query;
+        }
+
+        @Override
+        protected String doInBackground(Void... params) {
+            Log.i("ASYNC:", "doInBackground");
+            return (new CloudFetchr().getAction());
+        }
+
+        @Override
+        protected void onPostExecute(String action) {
+            Log.i("SERGI:CLOUD:", "AsyncTask postExec, action = " + action);
+            mAction = action;
+        }
+    }
+  */
+    /*
     public static String getAction(Context context) {
-        ExecutorService service = Executors.newFixedThreadPool(10);
+        ExecutorService service = Executors.newFixedThreadPool(1);
 
         FutureTask<String> connectionTask = new FutureTask<String>(new GetActualAction(context));
         service.submit(connectionTask);
+
         try {
             return connectionTask.get();
         } catch (java.util.concurrent.ExecutionException ex) {
@@ -60,6 +108,11 @@ public class PollService extends Service {
         } catch (InterruptedException ex) {
             ex.printStackTrace();
             return "error";
+        }
+        try {
+            service.awaitTermination(3000, TimeUnit.SECONDS);
+        } catch (InterruptedException ie) {
+            //Do nothing
         }
     }
 
@@ -78,31 +131,12 @@ public class PollService extends Service {
         public String call() {
             return ( new CloudFetchr().getAction());
         }
+
     }
+*/
 
 
 
-    //Define an alarm to check every X seconds if new content is available
-    public static void startServiceAlarm(Context context, boolean isOn) {
-        Intent i = PollService.newIntent(context);
-
-        PendingIntent pi = PendingIntent.getService(context,0,i,0);
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (isOn) {
-            alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(), POLL_INTERVAL, pi);
-        } else {
-            alarmManager.cancel(pi);
-            pi.cancel();
-        }
-    }
-
-
-    // Check if alarm is active
-    public static boolean isServiceAlarmOn(Context context) {
-        Intent i = PollService.newIntent(context);
-        PendingIntent pi = PendingIntent.getService(context,0,i,PendingIntent.FLAG_NO_CREATE);
-        return pi!= null;
-    }
 /*
     @Override
     protected void onHandleIntent(Intent intent) {

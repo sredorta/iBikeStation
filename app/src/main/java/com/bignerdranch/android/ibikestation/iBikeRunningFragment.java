@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -14,7 +13,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 /**
  * Created by sredorta on 11/29/2016.
@@ -22,10 +24,11 @@ import android.widget.Toast;
 public class iBikeRunningFragment extends Fragment {
     private static final String TAG = "SERGI:POLL";
     public static Locker mLocker;
-    public BroadcastReceiver PollServiceReceiver;
-    static final public String BROADCAST_ACTION = "com.bignerdranch.android.ibikestation.PollService";
-    private FetchCloudTask task;
-
+    public String mAction="test";
+    public boolean isActive = false;
+    public BroadcastReceiver pollServiceReceiver;
+    TextView myText;
+    public final GPIO myLED = new GPIO(935);
     public static iBikeRunningFragment newInstance(Locker myLocker) {
         iBikeRunningFragment fragment = new iBikeRunningFragment();
         mLocker = myLocker;
@@ -42,12 +45,46 @@ public class iBikeRunningFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_ibikerunning, container, false);
-        Toast.makeText(getActivity(),"mLocker gps:" + mLocker.isGpsLocated(), Toast.LENGTH_LONG).show();
-        if (mLocker.isGpsLocated()) {
-            Toast.makeText(getActivity(),"longitude:" + mLocker.getLockerLocation().getLongitude() + "\nlatitude:" + mLocker.getLockerLocation().getLatitude(), Toast.LENGTH_LONG).show();
-        }
+ //       Toast.makeText(getActivity(),"mLocker gps:" + mLocker.isGpsLocated(), Toast.LENGTH_LONG).show();
+//        if (mLocker.isGpsLocated()) {
+//            Toast.makeText(getActivity(),"longitude:" + mLocker.getLockerLocation().getLongitude() + "\nlatitude:" + mLocker.getLockerLocation().getLatitude(), Toast.LENGTH_LONG).show();
+//        }
 
-        startPolling();
+        myText = (TextView) v.findViewById(R.id.textViewTest);
+        myText.setText("No data");
+        //////////////////////startPolling();
+
+        final Button myToggle = (Button) v.findViewById(R.id.button);
+        final Button myBAct = (Button) v.findViewById(R.id.buttonActivate);
+        final Button myBDesAct = (Button) v.findViewById(R.id.buttonDesactivate);
+
+        myBAct.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                myLED.activationPin();
+                myLED.setInOut("Out");
+            }
+        });
+        myBDesAct.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                myLED.desactivationPin();
+            }
+        });
+
+        myToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (isActive) {
+                    Toast.makeText(getActivity(),"Disable", Toast.LENGTH_SHORT).show();
+                    myLED.setState(0);
+                } else {
+                    Toast.makeText(getActivity(),"Enable", Toast.LENGTH_SHORT).show();
+                    myLED.setState(1);
+                }
+                isActive=!isActive;
+            }
+        });
 
         return v;
     }
@@ -55,58 +92,30 @@ public class iBikeRunningFragment extends Fragment {
 
     @Override
     public void onDestroy() {
-//        getActivity().registerReceiver(PollServiceReceiver, new IntentFilter(
-//                PollService.BROADCAST_ACTION));
-        //Stop the service before destroying
- /*       if (PollService.isServiceAlarmOn(getActivity())) {
-            PollService.startServiceAlarm(getActivity(), true);
-            getActivity().stopService(PollServiceIntent);
-            getActivity().unregisterReceiver(PollServiceReceiver);
-        }*/
+        //Stop the Polling service
+        PollService.setServiceAlarm(getActivity(),false);
+        getActivity().unregisterReceiver(pollServiceReceiver);
         super.onDestroy();
     }
 
 
     private void startPolling() {
-        //Update fields of location in the SQL db
-        task = new FetchCloudTask("getAction");
-        task.execute();
-    }
+        //Start service of polling on SQL
+        PollService.setServiceAlarm(getActivity(),true);
+        pollServiceReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
 
-
-    //Get data from website
-    private class FetchCloudTask extends AsyncTask<Void,Void,String> {
-        private String mQuery;
-
-        public FetchCloudTask(String query) {
-            mQuery = query;
-        }
-
-
-        @Override
-        protected String doInBackground(Void... params) {
-            Log.i(TAG, "doInBackground");
-            switch (mQuery) {
-                case "getAction":
-                    Log.i("ASYNC:", "We are in isCoudConnected");
-                    return (new CloudFetchr().getAction());
-                default:
-                    return (new CloudFetchr().getAction());
+//                Log.i("SERGI", "onReceive new POLL data !");
+                  mAction = intent.getStringExtra("action");
+//                Log.i("SERGI", "onReceive action:" + mAction);
+                myText.setText(mAction);
+//                Toast.makeText(getActivity(),"Recieved data: " + mAction, Toast.LENGTH_SHORT).show();
             }
-
-        }
-
-        @Override
-        protected void onPostExecute(String action) {
-            Log.i(TAG, "AsyncTask postExec, success = " + action);
-            switch (mQuery) {
-                case "getAction":
-                    mLocker.setAction(action);
-                    break;
-                default:
-                    //Do nothing
-            }
-        }
+        };
+        //Register the receiver
+        getActivity().registerReceiver(pollServiceReceiver, new IntentFilter(
+                PollService.BROADCAST_ACTION));
     }
 
 }
