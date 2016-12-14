@@ -68,10 +68,10 @@ public class iBikeStationFragment extends Fragment {
         //Create one Assets object for handling images
         mAssetImage = new AssetHandler(getActivity());
 
- //////////////       updateGpsLocation();
- //////////////       checkInternetConnectivity();
- /////////////       checkCloudConnectivity();
- ////////////       updateCloud();
+       updateGpsLocation();
+       checkInternetConnectivity();
+       checkCloudConnectivity();
+       updateCloud();
         Toast.makeText(getActivity(), R.string.checker_result_ok, Toast.LENGTH_LONG).show();
         Intent i = iBikeRunningActivity.newIntent(getActivity(),mLocker);
         startActivity(i);

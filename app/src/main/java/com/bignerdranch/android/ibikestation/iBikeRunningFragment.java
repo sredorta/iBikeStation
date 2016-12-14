@@ -28,7 +28,7 @@ public class iBikeRunningFragment extends Fragment {
     public boolean isActive = false;
     public BroadcastReceiver pollServiceReceiver;
     TextView myText;
-    public final GPIO myLED = new GPIO(935);
+    public final GPIO myLED = new GPIO(36);
     public static iBikeRunningFragment newInstance(Locker myLocker) {
         iBikeRunningFragment fragment = new iBikeRunningFragment();
         mLocker = myLocker;
@@ -62,7 +62,7 @@ public class iBikeRunningFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 myLED.activationPin();
-                myLED.setInOut("Out");
+                myLED.setInOut("out");
             }
         });
         myBDesAct.setOnClickListener(new View.OnClickListener() {
