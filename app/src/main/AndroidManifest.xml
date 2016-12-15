@@ -17,7 +17,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".iBikeRunningActivity"></activity>
+        <activity android:name=".iBikeRunningActivity"/>
         <service android:name=".GpsService"/>
         <service android:name=".InternetService"/>
         <service android:name=".PollService" />

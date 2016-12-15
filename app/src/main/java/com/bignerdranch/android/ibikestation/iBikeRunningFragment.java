@@ -29,6 +29,7 @@ public class iBikeRunningFragment extends Fragment {
     public BroadcastReceiver pollServiceReceiver;
     TextView myText;
     public final GPIO myLED = new GPIO(36);
+
     public static iBikeRunningFragment newInstance(Locker myLocker) {
         iBikeRunningFragment fragment = new iBikeRunningFragment();
         mLocker = myLocker;
@@ -38,7 +39,8 @@ public class iBikeRunningFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //Toast.makeText(getActivity(),"mLocker Longitude is:" + mLocker.isGpsLocated(), Toast.LENGTH_LONG).show();
+        Toast.makeText(getActivity(),"Start polling:", Toast.LENGTH_LONG).show();
+        startPolling();
     }
 
     @Nullable
@@ -108,6 +110,8 @@ public class iBikeRunningFragment extends Fragment {
 
 //                Log.i("SERGI", "onReceive new POLL data !");
                   mAction = intent.getStringExtra("action");
+                  if (mAction.equals("on")) myLED.setState(1);
+                  if (mAction.equals("off")) myLED.setState(0);
 //                Log.i("SERGI", "onReceive action:" + mAction);
                 myText.setText(mAction);
 //                Toast.makeText(getActivity(),"Recieved data: " + mAction, Toast.LENGTH_SHORT).show();

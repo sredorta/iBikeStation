@@ -10,6 +10,8 @@ import android.os.AsyncTask;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
+import android.widget.Toast;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,7 +28,7 @@ public class PollService extends IntentService {
     public static Context mContext;
     public String mAction = "nothing";
 //    private FetchCloudTask task;
-    private static final int POLL_INTERVAL = 1000*2; // 6 seconds
+    private static final int POLL_INTERVAL = 1000*1; // 6 seconds
 
     //Constructor
     public PollService() {super(TAG);}

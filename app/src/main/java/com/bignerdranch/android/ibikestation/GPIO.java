@@ -10,7 +10,7 @@ import java.io.InputStreamReader;
  * Created by sredorta on 12/1/2016.
  */
 /* USAGE EXAMPLE
-GPIO.setDebugMode(true);
+        GPIO.setDebugMode(true);
         Boolean isEnabled = GPIO.isSuperUserAvailable();
         if (isEnabled) {
         Toast.makeText(getApplicationContext(),"SuperUser on",Toast.LENGTH_SHORT).show();

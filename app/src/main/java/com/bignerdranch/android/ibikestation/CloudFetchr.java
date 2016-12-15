@@ -79,9 +79,25 @@ public class CloudFetchr {
             connection = (HttpURLConnection) url.openConnection();
             //Required to enable input stream, otherwhise we get EOF (When using POST DoOutput is required
             connection.setDoInput(true);
-            connection.setReadTimeout(15000);
+            connection.setReadTimeout(1000);
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
             connection.setRequestMethod("GET");
+            connection.connect();
+            switch(connection.getResponseCode())
+            {
+                case HttpURLConnection.HTTP_OK:
+                    Log.i(TAG, "Connected !");
+                    break;
+                case HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
+                    Log.i(TAG, "Timout !");
+                    return "";
+                case HttpURLConnection.HTTP_UNAVAILABLE:
+                    Log.i(TAG, "Server not available");
+                    return "";
+                default:
+                    Log.i(TAG, "Not connected  !");
+                    return "";
+            }
 /*            request = new OutputStreamWriter(connection.getOutputStream());
               request.write(getPostDataJsonString(parameters));
               request.flush();
@@ -103,7 +119,8 @@ public class CloudFetchr {
 
         } catch (IOException e) {
             // Error
-            Log.e(TAG, "POST method try", e);
+            Log.i(TAG, "POST method try", e);
+            return "";
         }
         Log.i(TAG, response);
         return response;
@@ -128,6 +145,7 @@ public class CloudFetchr {
         parameters.put("latitude", latitude);
 
         URL url = buildUrl(PHP_STATION_UPDATE,parameters);
+        Log.i("POLL", url.toString());
         JsonItem networkAnswer = getJSON(url);
         return (networkAnswer.getSuccess());
     }

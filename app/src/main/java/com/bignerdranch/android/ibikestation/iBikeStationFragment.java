@@ -66,15 +66,8 @@ public class iBikeStationFragment extends Fragment {
         mLocker = new Locker();
         mLocker.setLockerName(LOCKER_NAME);
         //Create one Assets object for handling images
-        mAssetImage = new AssetHandler(getActivity());
+ //       mAssetImage = new AssetHandler(getActivity());
 
-       updateGpsLocation();
-       checkInternetConnectivity();
-       checkCloudConnectivity();
-       updateCloud();
-        Toast.makeText(getActivity(), R.string.checker_result_ok, Toast.LENGTH_LONG).show();
-        Intent i = iBikeRunningActivity.newIntent(getActivity(),mLocker);
-        startActivity(i);
 
     }
 
@@ -85,12 +78,25 @@ public class iBikeStationFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_ibikestation, container, false);
-
+//        updateGpsLocation();
+//        checkInternetConnectivity();
+//        checkCloudConnectivity();
+//        updateCloud();
         mSceneView = v;
-        final ImageView mGpsView = (ImageView) v.findViewById(R.id.imageGps);
-        final ImageView mNetworkView = (ImageView) v.findViewById(R.id.imageNetwork);
-        final ImageView mCloudView = (ImageView) v.findViewById(R.id.imageCloud);
-/*
+        final ImageViewChecker mGpsView = (ImageViewChecker) v.findViewById(R.id.imageGps);
+        final ImageViewChecker mNetworkView = (ImageViewChecker) v.findViewById(R.id.imageNetwork);
+        final ImageViewChecker mCloudView = (ImageViewChecker) v.findViewById(R.id.imageCloud);
+
+        ImageViewChecker.setDebugMode(true);
+        mGpsView.loadBitmapAsset("gps.png");
+        mNetworkView.loadBitmapAsset("network.png");
+        mCloudView.loadBitmapAsset("cloud.png");
+        mGpsView.startAnimation();
+        mNetworkView.setResult(true);
+        mNetworkView.startAnimation();
+        mCloudView.startAnimation();
+
+ /*
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playSequentially(startAnimation("gps", v, mGpsView),startAnimation("network", v, mNetworkView),startAnimation("cloud", v, mCloudView));
         animatorSet.addListener(new AnimatorSet.AnimatorListener() {
@@ -126,8 +132,9 @@ public class iBikeStationFragment extends Fragment {
             Toast.makeText(getActivity(), R.string.checker_result_ok, Toast.LENGTH_LONG).show();
             Intent i = iBikeRunningActivity.newIntent(getActivity(),mLocker);
             startActivity(i);
-            //Kill this activity of checking now and switch to the new one
-//////////////////////////////////////////////////////////////            myActivity.finish();
+
+        } else {
+            Toast.makeText(getActivity(), "Parameters invalid  !", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -195,7 +202,7 @@ public class iBikeStationFragment extends Fragment {
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.play(fadeInResultAnimator).after(fadeInAnimator);
         animatorSet.start() ;
-        */
+  */
         return fadeInAnimator;
     }
 
